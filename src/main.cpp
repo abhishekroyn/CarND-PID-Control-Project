@@ -4,10 +4,13 @@
 #include <string>
 #include "json.hpp"
 #include "PID.h"
+#include <tuple>
 
 // for convenience
 using nlohmann::json;
 using std::string;
+
+bool coeff_tune_twiddle = false;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -37,10 +40,27 @@ int main(int argc, char *argv[]) {    // int main() {
   /**
    * TODO: Initialize the pid variable.
    */
-  double init_Kp = atof(argv[1]); // double init_Kp = -0.25; 
-  double init_Ki = atof(argv[2]); // double init_Kp = 0
-  double init_Kd = atof(argv[3]); // double init_Kp = -0.75;
-  pid.Init(init_Kp, init_Ki, init_Kd);
+
+  double init_Kp, init_Ki, init_Kd;
+//  bool coeff_tune_twiddle = false;
+
+  if (argc > 1) {
+    init_Kp = atof(argv[1]);
+    init_Ki = atof(argv[2]);
+    init_Kd = atof(argv[3]);
+    if (argc > 4) {
+      std::string coeff_tune_method = argv[4];
+      if (coeff_tune_method.compare("twiddle") == 0) {
+        coeff_tune_twiddle = true;
+      }
+    }
+  } else {
+    init_Kp = -0.09;
+    init_Ki = -0.0001;
+    init_Kd = -1.80;
+  }
+
+  pid.Init(init_Kp, init_Ki, init_Kd, coeff_tune_twiddle);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
@@ -58,8 +78,8 @@ int main(int argc, char *argv[]) {    // int main() {
         if (event == "telemetry") {
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<string>());
-          double speed = std::stod(j[1]["speed"].get<string>());
-          double angle = std::stod(j[1]["steering_angle"].get<string>());
+//          double speed = std::stod(j[1]["speed"].get<string>());
+//          double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
           /**
            * TODO: Calculate steering value here, remember the steering value is
@@ -70,15 +90,41 @@ int main(int argc, char *argv[]) {    // int main() {
           pid.UpdateError(cte);
           steer_value = pid.TotalError();
 
+          static double pid_tunable_param = 0.0;
+          static double current_Kp = 0.0;
+          static double twiddle_accumulated_error = 0.0;
+
+          if (coeff_tune_twiddle) {
+            if (pid.getCounter() > 500) {
+              std::cout << "============= Using Twiddle to update! =============" << std::endl;
+              pid_tunable_param = pid.getKp();
+              current_Kp = pid.Twiddle(twiddle_accumulated_error, pid_tunable_param);
+              pid.setKp(current_Kp);
+              pid.Restart(ws);
+              pid.resetCounter();
+              twiddle_accumulated_error = 0.0;
+            } else {
+              twiddle_accumulated_error  += pow(cte, 2);
+            }
+          }
+
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
+//          std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
+//                    << std::endl;
+          double final_Kp, final_Ki, final_Kd;
+          std::tie(final_Kp, final_Ki, final_Kd) = pid.Coefficients();
+          std::cout << "Counter : " << pid.getCounter() 
+                    << "     Average Error : " <<  pid.AverageError() 
+                    << " [" << pid.MinError() << ", " << pid.MaxError() << "]" 
+                    << "     PID Coefficients : " 
+                    << " (" << final_Kp << ", " << final_Ki << ", " << final_Kd << ")" 
                     << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+//          std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if
       } else {
