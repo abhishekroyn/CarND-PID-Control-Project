@@ -31,8 +31,8 @@ void PID::Init(double Kp_, double Ki_, double Kd_, bool coeff_tune_twiddle) {
   max_error = std::numeric_limits<double>::min();
 
   if (coeff_tune_twiddle) {
-    tolerance = 0.005;                                // 0.005
-    delta_param = -0.01;                               // -0.01
+    tolerance = 0.005;
+    delta_param = -0.01;
   }
 }
 
@@ -72,22 +72,21 @@ void PID::Restart(uWS::WebSocket<uWS::SERVER> ws) {
 double PID::Twiddle(double twiddle_accumulated_error, double pid_tunable_param) {
   static double current_best_error = 100000;
   static bool is_twiddle_init = false;
-  static bool is_twiddle_reset = true;          // false;
+  static bool is_twiddle_reset = true;
   static double last_pid_tunable_param = 0;
   std::cout << "Current best error is: " << current_best_error << std::endl;
+  std::cout << "Twiddle accumulated error is: " << twiddle_accumulated_error << std::endl;
   std::cout << "Delta param is: " << delta_param << std::endl;
   if (!is_twiddle_init) {
   	std::cout << "Twiddle initialized!" << std::endl;
   	current_best_error = twiddle_accumulated_error;
   	is_twiddle_init = true;
-//  	return;
   }
   if ((fabs(delta_param) > tolerance)) {
   	if (is_twiddle_reset) {
   		std::cout << "Twiddle reset!-----------------------------" << std::endl;
   		last_pid_tunable_param = pid_tunable_param;
   		pid_tunable_param += delta_param;
-//  		std::cout << "PID tunable param magnitude increased!" << endl;
   		is_twiddle_reset = false;
       return pid_tunable_param;
   	} else {
@@ -107,7 +106,6 @@ double PID::Twiddle(double twiddle_accumulated_error, double pid_tunable_param) 
   				pid_tunable_param += delta_param;
   				delta_param *= 0.9;
           std::cout << "PID tunable param magnitude increased!" << std::endl;
-//  				std::cout << "PID tunable param magnitude kept same!" << endl;
   				is_twiddle_reset = true;
   			}
   		}
@@ -146,4 +144,20 @@ double PID::getKp() {
 
 void PID::setKp(double current_Kp) {
   this->Kp = current_Kp;
+}
+
+double PID::getKi() {
+  return this->Ki;
+}
+
+void PID::setKi(double current_Ki) {
+  this->Ki = current_Ki;
+}
+
+double PID::getKd() {
+  return this->Kd;
+}
+
+void PID::setKd(double current_Kd) {
+  this->Kd = current_Kd;
 }

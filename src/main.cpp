@@ -91,18 +91,20 @@ int main(int argc, char *argv[]) {    // int main() {
           steer_value = pid.TotalError();
 
           static double pid_tunable_param = 0.0;
-          static double current_Kp = 0.0;
+          static double current_param = 0.0;
           static double twiddle_accumulated_error = 0.0;
 
           if (coeff_tune_twiddle) {
-            if (pid.getCounter() > 500) {
+            if (pid.getCounter() > 2500) {
               std::cout << "============= Using Twiddle to update! =============" << std::endl;
               pid_tunable_param = pid.getKp();
-              current_Kp = pid.Twiddle(twiddle_accumulated_error, pid_tunable_param);
-              pid.setKp(current_Kp);
-              pid.Restart(ws);
-              pid.resetCounter();
-              twiddle_accumulated_error = 0.0;
+              current_param = pid.Twiddle(twiddle_accumulated_error, pid_tunable_param);
+              if (current_param != pid_tunable_param) {
+                pid.setKp(current_param);
+                pid.Restart(ws);
+                pid.resetCounter();
+                twiddle_accumulated_error = 0.0;
+              }
             } else {
               twiddle_accumulated_error  += pow(cte, 2);
             }
