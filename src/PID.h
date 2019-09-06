@@ -93,6 +93,30 @@ class PID {
    */
   void setKp(double current_Kp);
 
+  /**
+   * Returns the PID coefficient Ki.
+   * @output The PID coefficient Ki
+   */
+  double getKi();
+
+  /**
+   * Assigns value to the PID coefficient Ki.
+   * @output None
+   */
+  void setKi(double current_Ki);
+
+  /**
+   * Returns the PID coefficient Kd.
+   * @output The PID coefficient Kd
+   */
+  double getKd();
+
+  /**
+   * Assigns value to the PID coefficient Kd.
+   * @output None
+   */
+  void setKd(double current_Kd);
+
  private:
   /**
    * PID Errors
