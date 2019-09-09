@@ -34,7 +34,7 @@ class PID {
   double TotalError();
 
   /**
-   * Restart the connectiong with the simulator.
+   * Restart the server connection with the simulator.
    * @output None
    */
   void Restart(uWS::WebSocket<uWS::SERVER> ws);
